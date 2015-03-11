@@ -62,6 +62,7 @@ public class FCFS
 		averageTurnaround /= (double)processes.length;
 		averageWait /= (double)processes.length;
 		totalPercentBurst = (totalBurst / finishedTime) * 100;
+		System.out.println("----------------------------------------");
 		System.out.println("Turnaround time: min " + minTurnaround + "ms; avg " + String.format("%.2f", averageTurnaround) + "ms; max " + maxTurnaround + "ms");
 		System.out.println("Total wait time: min " + minWait + "ms; avg " + String.format("%.2f", averageWait) + "ms; max " + maxWait + "ms");
 		System.out.println("Average CPU utilization: " + String.format("%.2f", totalPercentBurst) + "%\n");
@@ -91,16 +92,16 @@ public class FCFS
 		{
 			for (int i = 0; i < processes.length; i++)
 			{
-				int beforeRan = currentTime;
+				int burstTime = processes[i].getBurstTime();
+				int waitTime = processes[i].getWaitTime(currentTime);
+				int turnaroundTime = waitTime + burstTime;
 				
 				//run the burst
-				currentTime += processes[i].getBurstTime();
-				int waitTime = processes[i].getWaitTime(beforeRan);
-				int turnaroundTime = processes[i].getWaitTime(beforeRan) + processes[i].getBurstTime();
+				currentTime += burstTime;
 				System.out.println("[time " + currentTime + "ms] " + 
 						processes[i].getTypeString() + " process ID " + i + " CPU burst done " +
 						 "(turnaround time " + turnaroundTime + "ms, total wait time " + waitTime + "ms)");
-				processes[i].incrementBurst(processes[i].getBurstTime());
+				processes[i].incrementBurst(burstTime);
 				processes[i].incrementTurnaround(turnaroundTime);
 				processes[i].incrementWait(waitTime);
 				
@@ -118,8 +119,8 @@ public class FCFS
 				//human input delay (for interactive process)
 				currentTime += processes[i].getHumanResponseTime();
 				
-				//put in the ready queue
-				processes[i].setLastTimeRan(currentTime);
+				//put process in the ready queue
+				processes[(i + 1)%processes.length].setLastTimeRan(currentTime - turnaroundTime);
 				
 				//context switch
 				System.out.println("[time " + currentTime + "ms] Context switch (swapping out process ID " + i +
