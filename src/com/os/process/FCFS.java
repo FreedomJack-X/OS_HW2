@@ -37,11 +37,12 @@ public class FCFS
 		return isCPUProcessDone;
 	}
 	
-	public static void printAllProcessStats(Process[] processes)
+	public static void printAllProcessStats(Process[] processes, int finishedTime)
 	{
 		int minTurnaround = Integer.MAX_VALUE, maxTurnaround = Integer.MIN_VALUE; 
 		int minWait = Integer.MAX_VALUE, maxWait = Integer.MIN_VALUE;
 		double averageTurnaround = 0, averageWait = 0;
+		double totalBurst = 0, totalPercentBurst = 0;
 		for (int i = 0; i < processes.length; i++)
 		{
 			//keep track of statistics
@@ -54,13 +55,23 @@ public class FCFS
 			minWait = Math.min(minWait, processWait);
 			maxWait = Math.max(maxWait, processWait);
 			averageWait += processWait;
+			
+			totalBurst += processes[i].getTotalBurst();
 		}
 		
 		averageTurnaround /= (double)processes.length;
 		averageWait /= (double)processes.length;
-		
+		totalPercentBurst = (totalBurst / finishedTime) * 100;
 		System.out.println("Turnaround time: min " + minTurnaround + "ms; avg " + String.format("%.2f", averageTurnaround) + "ms; max " + maxTurnaround + "ms");
 		System.out.println("Total wait time: min " + minWait + "ms; avg " + String.format("%.2f", averageWait) + "ms; max " + maxWait + "ms");
+		System.out.println("Average CPU utilization: " + String.format("%.2f", totalPercentBurst) + "%\n");
+		
+		System.out.println("Average CPU utilization per process: ");
+		for (int i = 0; i < processes.length; i++)
+		{
+			double percentBurst = ((double)processes[i].getTotalBurst() / finishedTime) * 100;
+			System.out.println("process ID " +  i + ": " + String.format("%.2f", percentBurst) +"%");
+		}
 	}
 	
 	public static void main(String[] args) 
@@ -86,9 +97,10 @@ public class FCFS
 				currentTime += processes[i].getBurstTime();
 				int waitTime = processes[i].getWaitTime(beforeRan);
 				int turnaroundTime = processes[i].getWaitTime(beforeRan) + processes[i].getBurstTime();
-				System.out.println("[time " + currentTime + "ms] " + processes[i].getTypeString() + " process ID " + i + " CPU burst done " +
+				System.out.println("[time " + currentTime + "ms] " + 
+						processes[i].getTypeString() + " process ID " + i + " CPU burst done " +
 						 "(turnaround time " + turnaroundTime + "ms, total wait time " + waitTime + "ms)");
-				
+				processes[i].incrementBurst(processes[i].getBurstTime());
 				processes[i].incrementTurnaround(turnaroundTime);
 				processes[i].incrementWait(waitTime);
 				
@@ -120,7 +132,7 @@ public class FCFS
 				break;
 		}
 		
-		printAllProcessStats(processes);
+		printAllProcessStats(processes, currentTime);
 	}
 
 }

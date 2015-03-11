@@ -42,8 +42,10 @@ public class Process
 	}
 	
 	//each process has its own burst time
-	private int burstTime;
+	private int burstTime, totalBurst;
 	public int getBurstTime() { return burstTime; } 
+	public int getTotalBurst() { return this.totalBurst; }
+	public void incrementBurst(int time) { this.totalBurst += time; }
 	
 	//between each process, there is a random block of time where the human spends time responding
 	public int getHumanResponseTime() { return randomObj.nextInt(4500 - 1000) + 1000; }
