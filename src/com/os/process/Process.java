@@ -1,5 +1,6 @@
 package com.os.process;
 
+import java.util.Comparator;
 import java.util.Random;
 
 public class Process 
@@ -16,14 +17,18 @@ public class Process
 		return ""; 
 	}
 	
+	//id
+	public int ID;
+	
 	//random number generator for bursts
 	private Random randomObj;
 	
-	public Process(int type)
+	public Process(int type, int id)
 	{
 		randomObj = new Random();
 		
 		this.type = type;
+		this.ID = id;
 		if (type == TYPE_INTERACTIVE)
 		{
 			burstTime = randomObj.nextInt(200 - 20) + 20; 
@@ -36,8 +41,9 @@ public class Process
 			burstsLeft = 2; //set to 2 for testing purposes
 		}
 		
-		totalTurnaround = 0;
+		totalBurst = 0;
 		totalWait = 0;
+		totalTurnaround = 0;
 		lastTimeRan = 0;
 	}
 	
@@ -71,4 +77,18 @@ public class Process
 		this.totalWait += waitTime;
 		this.totalTurnaround += turnaroundTime; 
 	}
+	
+	public static Comparator<Process> ProcessComparatorBurst = new Comparator<Process>(){
+		public int compare(Process p1, Process p2)
+		{
+			return Integer.compare(p1.getBurstTime(), p2.getBurstTime());
+		}
+	};
+	
+	public static Comparator<Process> ProcessComparatorID = new Comparator<Process>(){
+		public int compare(Process p1, Process p2)
+		{
+			return Integer.compare(p1.ID, p2.ID);
+		}
+	};
 }
