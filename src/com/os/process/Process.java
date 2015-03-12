@@ -42,7 +42,7 @@ public class Process
 	}
 	
 	//each process has its own burst time
-	private int burstTime, totalBurst;
+	private int burstTime, totalBurst; 
 	public int getBurstTime() { return burstTime; } 
 	public int getTotalBurst() { return this.totalBurst; }
 	public void incrementBurst(int time) { this.totalBurst += time; }
