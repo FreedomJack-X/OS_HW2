@@ -45,7 +45,7 @@ public class Process
 	private int burstTime, totalBurst; 
 	public int getBurstTime() { return burstTime; } 
 	public int getTotalBurst() { return this.totalBurst; }
-	public void incrementBurst(int time) { this.totalBurst += time; }
+	
 	
 	//between each process, there is a random block of time where the human spends time responding
 	public int getHumanResponseTime() { return randomObj.nextInt(4500 - 1000) + 1000; }
@@ -64,7 +64,11 @@ public class Process
 	//process statistics (total wait time, total turnaround time)
 	private int totalTurnaround, totalWait;
 	public int getTotalWait() { return this.totalWait; }
-	public void incrementWait(int time) { this.totalWait += time; }
 	public int getTotalTurnaround() { return this.totalTurnaround; }
-	public void incrementTurnaround(int time) { this.totalTurnaround += time; }
+	public void incrementProcessStats(int burstTime, int waitTime, int turnaroundTime) 
+	{ 
+		this.totalBurst += burstTime; 
+		this.totalWait += waitTime;
+		this.totalTurnaround += turnaroundTime; 
+	}
 }
