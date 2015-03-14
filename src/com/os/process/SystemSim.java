@@ -15,13 +15,15 @@ public class SystemSim {
 	private Process processes[];  // List of processes
 	private Queue<Process> queue; // queue of processes
 	private int totalTime;		  // Timer
+	private int switchTime;
 	
-	public SystemSim(float probabilityInteractive, int numCores, int numProcess){
+	public SystemSim(float probabilityInteractive, int numCores, int numProcess, int switchTime){
 		Random randObj = new Random();
 		processes = new Process[numProcess];
 		NumCores = numCores;
 		ready = new int[numCores];
 		totalTime = 0;
+		this.switchTime = switchTime;
 		for (int i = 0; i < processes.length; i++)
 		{
 			//determine process type
@@ -33,8 +35,8 @@ public class SystemSim {
 				processes[i] = new Process(Process.TYPE_CPU, i);
 			
 			//Process have entered ready queue
-			System.out.println("[time 0ms] " + processes[i].getTypeString() + " process ID " + i + 
-					" entered ready queue (requires "  + processes[i].getBurstTime() + "ms CPU time)");
+			//System.out.println("[time 0ms] " + processes[i].getTypeString() + " process ID " + i + 
+			//		" entered ready queue (requires "  + processes[i].getBurstTime() + "ms CPU time)");
 		}
 	}
 	
@@ -49,17 +51,38 @@ public class SystemSim {
 	}
 	
 	public void SJFNoPre(){
-		Process[] processCopied = new Process[processes.length];
+		queue = new PriorityQueue<Process>(processes.length, Process.ProcessComparatorBurst);
 		for (int i = 0; i < processes.length; i++)
-			processCopied[i] = processes[i];
-
-		queue = new PriorityQueue<Process>(processCopied.length, Process.ProcessComparatorBurst);
-
-		Process[] processSorted = new Process[processes.length];
-		for (int i = 0; i < processes.length; i++)
-			processSorted[i] = processes[i];
-		
-		runCores(processSorted);
+		{
+			queue.add(processes[i]);
+			System.out.println("[time 0ms] "+processes[i].getTypeString()+" process ID "+i+" entered ready queue (requires "+processes[i].getBurstTime() + "ms CPU time)");
+		}
+		while(true)
+		{
+			for(int i = 0; i < NumCores; i++)
+			{
+				if(totalTime >= ready[i])
+				{
+					if(!queue.isEmpty())
+					{
+						Process newProcess = queue.remove();
+						ready[i] += newProcess.getBurstTime();
+						ready[i] += switchTime;
+						//System.out.println("[time "+totalTime +"ms] Context switch (swapping out process ID "+ +" for process ID "+ newProcess.ID +")");
+//						if()
+//						{
+//							
+//						}
+					}
+					else
+					{
+						continue;
+					}
+				}
+			}
+			totalTime++;
+		}
+		//runCores(processSorted);
 	}
 	
 	public void SJFWithPre(){
