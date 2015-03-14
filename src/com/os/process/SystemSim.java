@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
@@ -46,7 +47,7 @@ public class SystemSim {
 		for (int i = 0; i < processes.length; i++)
 			processCopied[i] = processes[i];
 		
-		queue = new PriorityQueue<Process>(processCopied.length, Process.ProcessComparatorID);
+		queue = new LinkedList<Process>();
 
 		runCores(processCopied);
 	}
@@ -118,6 +119,7 @@ public class SystemSim {
 			{
 				Process currentProcess = queue.remove(); 
 				
+				//reset queue
 				if (queue.isEmpty())
 				{
 					for (int j = 0; j < systemProcess.length; j++)
