@@ -45,6 +45,7 @@ public class Process
 		totalWait = 0;
 		totalTurnaround = 0;
 		lastTimeRan = 0;
+		IOBlockTime = 0;
 	}
 	
 	//each process has its own burst time
@@ -52,14 +53,20 @@ public class Process
 	public int getBurstTime() { return burstTime; } 
 	public int getTotalBurst() { return this.totalBurst; }
 	
-	
 	//between each process, there is a random block of time where the human spends time responding
-	public int getHumanResponseTime() { return randomObj.nextInt(4500 - 1000) + 1000; }
+	private int IOBlockTime;
+	public int getIOBlockTime() { return this.IOBlockTime; }
+	public void setIOBlockTime(int totalTime) 
+	{ 
+		this.IOBlockTime = randomObj.nextInt(4500 - 1000) + 1000; //set time between 1000ms-4500ms
+		this.IOBlockTime += totalTime;
+	}
 	
 	//for cpu-bound processes, there are a limited number of bursts.
 	//once the bursts run out, the process terminates
 	private int burstsLeft;
 	public void decrementBursts() { burstsLeft--; } 
+	public int getBurstsLeft() { return burstsLeft; }
 	public boolean isBurstsDone() { return (burstsLeft <= 0); } 
 		
 	//current wait time
