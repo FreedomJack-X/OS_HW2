@@ -4,14 +4,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
 
 public class SystemSim {
 	private int NumCores;		  // number of cores
-	private int ready[];	  // ready state of each cores
+	private int ready[];	  	  // ready state of each cores
+	private int coreToProcessID[]; //each core runs a different process
 	private Process processes[];  // List of processes
 	private Queue<Process> queue; // queue of processes
 	private int totalTime;		  // Timer
@@ -20,7 +23,7 @@ public class SystemSim {
 		Random randObj = new Random();
 		processes = new Process[numProcess];
 		NumCores = numCores;
-		ready = new int[numCores];
+		ready = new int[processes.length];
 		totalTime = 0;
 		for (int i = 0; i < processes.length; i++)
 		{
@@ -38,14 +41,118 @@ public class SystemSim {
 		}
 	}
 	
-	public void FCFS(){
-		Process[] processCopied = new Process[processes.length];
-		for (int i = 0; i < processes.length; i++)
-			processCopied[i] = processes[i];
-		
+	public void FCFS(){		
 		queue = new LinkedList<Process>();
+		for (int i = 0; i < processes.length; i++)
+			queue.add(processes[i]);
+		
+		coreToProcessID = new int[NumCores];
+		for (int i = 0; i < coreToProcessID.length; i++)
+			coreToProcessID[i] = -1;
 
-		runCores(processCopied);
+		int totalTime = 0;
+
+		//run all interactive processes
+		while (true)
+		{
+			//run each core separately
+			for (int i = 0; i < NumCores; i++)
+			{
+				Process currentProcess, nextProcess;
+				
+				//if uninitialized, remove process from the queue
+				if (coreToProcessID[i] == -1)
+				{
+					currentProcess = queue.remove();
+					coreToProcessID[i] = currentProcess.ID;
+					ready[coreToProcessID[i]] = totalTime + currentProcess.getBurstTime();
+				}
+				else	
+				{
+					currentProcess = processes[coreToProcessID[i]];
+				}
+				
+				//fetch the next process
+				nextProcess = queue.peek();
+				
+				//if core is finished running current process
+				//-->swap currentProcess with newProcess
+				//-->remove newProcess from queue (add it back later once it's done waiting for I/O)
+				//increment time
+				
+				//core is finished running process
+				if (ready[currentProcess.ID] == totalTime)
+				{	
+					//check if cpu-bound process terminated
+					if (currentProcess.getType() == Process.TYPE_CPU)
+					{	
+						currentProcess.decrementBursts();
+						if (currentProcess.isBurstsDone())
+						{
+							System.out.println("[time " + totalTime + "ms] " +
+									"CPU-bound process ID " + currentProcess.ID + " terminated " + 
+									"(total turnaround time " + currentProcess.getTotalTurnaround() + "ms, " +
+									"total wait time " + currentProcess.getTotalWait() +"ms)");
+						}
+					}
+					else if (currentProcess.getType() == Process.TYPE_INTERACTIVE)
+					{
+						System.out.println("[time " + totalTime + "ms] " + 
+								"Interactive process ID " + currentProcess.ID + " CPU burst done " +
+								"(turnaround time " + currentProcess.getTotalTurnaround() + "ms, " +
+										"total wait time " + currentProcess.getTotalWait() + "ms)");
+					}
+					
+					//remove nextProcess from the queue
+					nextProcess = queue.remove();
+					
+					//Context Switch
+					System.out.println("[time " + totalTime + "ms] " + 
+							"Context switch (swapping out process ID " + currentProcess.ID + 
+							" for process ID " + nextProcess.ID + ")");
+
+					//save it in the core->process id map
+					coreToProcessID[i] = nextProcess.ID;
+
+					//process will be put in ready queue after its burst is done
+					ready[nextProcess.ID] = totalTime + nextProcess.getBurstTime();
+
+					//FOR NOW (ignore I/O)
+					//add it to the back
+					queue.add(nextProcess);
+
+					//System.out.println("Core: " + i);
+					//for (int j = 0; j < processes.length; j++)
+					//	System.out.println("ready process " + j + " : " + ready[j]);
+					
+					nextProcess.incrementProcessStats(0, totalTime, 0);
+				}		
+				else
+				{
+					currentProcess.incrementProcessStats(1, 0, 1);
+				}
+			}
+			
+			totalTime++;
+			
+			//terminate the program
+			boolean isCPUProcessDone = true;
+			for (int i = 0; i < processes.length; i++)
+			{
+				//only check cpu-bound processes
+				if (processes[i].getType() == Process.TYPE_CPU)
+				{
+					isCPUProcessDone &= processes[i].isBurstsDone();
+				}
+			}
+			if (isCPUProcessDone)
+				break;
+			
+			//if (totalTime > 2000)
+			//	break;
+		}
+
+		printAllProcessStats(processes, totalTime);
 	}
 	
 	public void SJFNoPre(){
@@ -59,7 +166,7 @@ public class SystemSim {
 		for (int i = 0; i < processes.length; i++)
 			processSorted[i] = processes[i];
 		
-		runCores(processSorted);
+		//runCores(processSorted);
 	}
 	
 	public void SJFWithPre(){
@@ -95,46 +202,6 @@ public class SystemSim {
 	//
 	// Helper functions
 	// 
-	
-	public void runCores(Process[] systemProcess)
-	{
-		int currentTime = 0;
-		
-		for (int i = 0; i < systemProcess.length; i++)
-			queue.add(systemProcess[i]);
-		
-		int[] currentTimes = new int[NumCores];
-		for (int i = 0; i < NumCores; i++)
-			currentTimes[i] = 0;
-	
-		//run all interactive processes
-		while (true)
-		{
-			//run each core separately
-			for (int i = 0; i < NumCores; i++)
-			{
-				Process currentProcess = queue.remove(); 
-				
-				//reset queue
-				if (queue.isEmpty())
-				{
-					for (int j = 0; j < systemProcess.length; j++)
-						queue.add(systemProcess[j]);
-				}
-				
-				Process nextProcess = queue.peek();
-				
-				currentTimes[i] = runCurrentProcess(currentProcess, nextProcess, currentTimes[i]);
-			}
-			
-			//terminate the program
-			if (checkIfCPUProcessDone(systemProcess))
-				break;
-		}
-		
-		Arrays.sort(currentTimes);
-		printAllProcessStats(systemProcess, currentTimes[NumCores - 1]);
-	}
 	
 	public int runCurrentProcess(Process currentProcess, Process nextProcess, int currentTime)
 	{
