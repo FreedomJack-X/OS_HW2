@@ -11,7 +11,7 @@ import java.util.Random;
 
 public class SystemSim {
 	private int NumCores;		  // number of cores
-	private boolean ready[];	  // ready state of each cores
+	private int ready[];	  // ready state of each cores
 	private Process processes[];  // List of processes
 	private Queue<Process> queue; // queue of processes
 	private int totalTime;		  // Timer
@@ -20,12 +20,8 @@ public class SystemSim {
 		Random randObj = new Random();
 		processes = new Process[numProcess];
 		NumCores = numCores;
-		ready = new boolean[numCores];
+		ready = new int[numCores];
 		totalTime = 0;
-		for (int j = 0; j < ready.length; j++)
-		{
-			ready[j] = true;
-		}
 		for (int i = 0; i < processes.length; i++)
 		{
 			//determine process type
