@@ -56,6 +56,10 @@ public class Process
 	//between each process, there is a random block of time where the human spends time responding
 	private int IOBlockTime;
 	public int getIOBlockTime() { return this.IOBlockTime; }
+	public void zeroIOBlockTime() 
+	{
+		this.IOBlockTime = 0;
+	}
 	public void setIOBlockTime(int totalTime) 
 	{ 
 		this.IOBlockTime = randomObj.nextInt(4500 - 1000) + 1000; //set time between 1000ms-4500ms
