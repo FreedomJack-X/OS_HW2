@@ -52,6 +52,9 @@ public class Process
 	private int burstTime, totalBurst, remainBurst; 
 	public int getBurstTime() { return burstTime; } 
 	public int getTotalBurst() { return this.totalBurst; }
+	public void initRemainBurst() { this.remainBurst = this.burstTime; }
+	public void decreaseRemainBurst(int amount) { this.remainBurst -= amount; }
+	public int getRemainBurst() { return this.remainBurst; }
 	
 	//between each process, there is a random block of time where the human spends time responding
 	private int IOBlockTime;
@@ -69,8 +72,8 @@ public class Process
 	//for cpu-bound processes, there are a limited number of bursts.
 	//once the bursts run out, the process terminates
 	private int burstsLeft;
-	public void decrementBursts() { burstsLeft--; } 
-	public int getBurstsLeft() { return burstsLeft; }
+	public void decrementNumBursts() { burstsLeft--; } 
+	public int getNumBurstsLeft() { return burstsLeft; }
 	public boolean isBurstsDone() { return (burstsLeft <= 0); } 
 		
 	//current wait time
