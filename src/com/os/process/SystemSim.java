@@ -150,32 +150,85 @@ public class SystemSim {
 			queue.add(processes[i]);
 			System.out.println("[time 0ms] "+processes[i].getTypeString()+" process ID "+i+" entered ready queue (requires "+processes[i].getBurstTime() + "ms CPU time)");
 		}
+		coreToProcessID = new int[NumCores];
+		for (int i = 0; i < coreToProcessID.length; i++)
+			coreToProcessID[i] = -1;
 		while(true)
 		{
+			//check all the waiting processes
+			handleWaitingProcesses(queue, processes, totalTime);
+			
 			for(int i = 0; i < NumCores; i++)
 			{
-				if(totalTime >= ready[i])
+				Process currentProcess, nextProcess;
+				
+				//if uninitialized, remove process from the queue
+				if (coreToProcessID[i] == -1)
 				{
-					if(!queue.isEmpty())
+					//no processes to run
+					if (queue.isEmpty())
+						continue;
+					
+					currentProcess = queue.remove();
+					
+					coreToProcessID[i] = currentProcess.ID;
+					ready[coreToProcessID[i]] = totalTime + currentProcess.getBurstTime();
+				}
+				else	
+				{
+					currentProcess = processes[coreToProcessID[i]];
+				}
+				
+				//if core is finished running current process
+				//-->swap currentProcess with newProcess
+				//-->remove newProcess from queue (add it back later once it's done waiting for I/O)
+				//...
+				//increment time
+				
+				//core is finished running process
+				if (ready[currentProcess.ID] == totalTime)
+				{	
+					//check if cpu-bound process terminated
+					handleProcessBurstDone(currentProcess, totalTime);
+					
+					//io blocking for this process
+					currentProcess.setIOBlockTime(totalTime);
+					
+					//Queue is empty, don't go forward
+					if (queue.isEmpty())
 					{
-						Process newProcess = queue.remove();
-						ready[i] += newProcess.getBurstTime();
-						ready[i] += switchTime;
-						//System.out.println("[time "+totalTime +"ms] Context switch (swapping out process ID "+ +" for process ID "+ newProcess.ID +")");
-//						if()
-//						{
-//							
-//						}
-					}
-					else
-					{
+						//this core isn't running any process 
+						coreToProcessID[i] = -1;
 						continue;
 					}
+					
+					//remove nextProcess from the queue
+					nextProcess = queue.remove();
+					
+					//Context Switch
+					System.out.println("[time " + totalTime + "ms] " + 
+							"Context switch (swapping out process ID " + currentProcess.ID + 
+							" for process ID " + nextProcess.ID + ")");
+
+					//save it in the core->process id map
+					coreToProcessID[i] = nextProcess.ID;
+					//process will be put in ready queue after its burst is done
+					ready[nextProcess.ID] = totalTime + nextProcess.getBurstTime();
+
+					nextProcess.incrementProcessStats(0, 1, 0);
+				}		
+				else
+				{
+					currentProcess.incrementProcessStats(1, 0, 1);
 				}
 			}
 			totalTime++;
+			
+			//terminate the program
+			if (checkIfCPUProcessDone(processes))
+				break;
 		}
-		//runCores(processSorted);
+		printAllProcessStats(processes, totalTime);
 	}
 	
 	public void SJFWithPre(){
@@ -304,28 +357,6 @@ public class SystemSim {
 		}
 
 		printAllProcessStats(processes, totalTime);
-	}
-	
-	/***
-	 * 
-	 * @param num id of algorithm, default==> FCFS, 1==>SJFnoPre, 2==>SJFWithPre, 3==>RR
-	 */
-	public void run(int num){
-		switch(num){
-			case 1:
-				SJFNoPre();
-				break;
-			case 2:
-				SJFWithPre();
-				break;
-			case 3:
-				RR();
-				break;
-			default:
-				FCFS();
-				break;
-				
-		}
 	}
 	
 	//
