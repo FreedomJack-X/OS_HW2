@@ -124,7 +124,7 @@ public class SystemSim {
 					//process will be put in ready queue after its burst is done
 					ready[nextProcess.ID] = totalTime + nextProcess.getBurstTime();
 
-					nextProcess.incrementProcessStats(0, 1, 0);
+					nextProcess.incrementProcessStats(0, currentProcess.getTotalWait() + currentProcess.getBurstTime(), 0);
 				}		
 				else
 				{
@@ -328,10 +328,13 @@ public class SystemSim {
 					nextProcess = queue.remove();
 					
 					//Context Switch
-					System.out.println("[time " + totalTime + "ms] " + 
-							"Context switch (swapping out process ID " + currentProcess.ID + 
-							" for process ID " + nextProcess.ID + ")");
-					
+					//Don't print if RR still runs the same process
+					if (currentProcess.ID != nextProcess.ID)
+					{
+						System.out.println("[time " + totalTime + "ms] " + 
+								"Context switch (swapping out process ID " + currentProcess.ID + 
+								" for process ID " + nextProcess.ID + ")");
+					}
 					//save it in the core->process id map
 					coreToProcessID[i] = nextProcess.ID;
 
@@ -424,7 +427,7 @@ public class SystemSim {
 		int minTurnaround = Integer.MAX_VALUE, maxTurnaround = Integer.MIN_VALUE; 
 		int minWait = Integer.MAX_VALUE, maxWait = Integer.MIN_VALUE;
 		double averageTurnaround = 0, averageWait = 0;
-		double totalBurst = 0, totalPercentBurst = 0;
+		double totalBurst = 0, averagePercentBurst = 0;
 		for (int i = 0; i < processes.length; i++)
 		{
 			//keep track of statistics
@@ -443,13 +446,13 @@ public class SystemSim {
 		
 		averageTurnaround /= (double)processes.length;
 		averageWait /= (double)processes.length;
-		totalPercentBurst = (totalBurst / finishedTime) * 100;
+		averagePercentBurst = ((totalBurst / finishedTime) * 100) / (double)processes.length;
 		
 		//Print out process statistics
 		System.out.println("----------------------------------------");
 		System.out.println("Turnaround time: min " + minTurnaround + "ms; avg " + String.format("%.2f", averageTurnaround) + "ms; max " + maxTurnaround + "ms");
 		System.out.println("Total wait time: min " + minWait + "ms; avg " + String.format("%.2f", averageWait) + "ms; max " + maxWait + "ms");
-		System.out.println("Average CPU utilization: " + String.format("%.2f", totalPercentBurst) + "%\n");
+		System.out.println("Average CPU utilization: " + String.format("%.2f", averagePercentBurst) + "%\n");
 		
 		System.out.println("Average CPU utilization per process: ");
 		for (int i = 0; i < processes.length; i++)
