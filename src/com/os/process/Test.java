@@ -9,8 +9,10 @@ public class Test
 		SystemSim system = new SystemSim(0.8f, 2, 12, 4);
 		//system.FCFS();
 		//system.SJFNoPre();
+		//system.FCFS();
+		//system.SJFNoPre();
 		//system.RR();
-		system.SJFwithPre();
+		system.SJFWithPre();
 	}
 
 }

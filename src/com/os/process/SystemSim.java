@@ -231,15 +231,12 @@ public class SystemSim {
 		printAllProcessStats(processes, totalTime);
 	}
 	
-	public void SJFWithPre(){
-		
-	}
-	
 	public void SJFWithPre(){		
 		queue = new PriorityQueue<Process>(processes.length, Process.ProcessComparatorRemain);;
 		for (int i = 0; i < processes.length; i++)
 		{
 			queue.add(processes[i]);
+			processes[i].initRemainBurst();
 			System.out.println("[time 0ms] "+processes[i].getTypeString()+" process ID "+i+" entered ready queue (requires "+processes[i].getBurstTime() + "ms CPU time)");
 		}
 		
@@ -312,9 +309,22 @@ public class SystemSim {
 					coreToProcessID[i] = nextProcess.ID;
 					//process will be put in ready queue after its burst is done
 					ready[nextProcess.ID] = totalTime + nextProcess.getBurstTime();
-
+					
+					if (nextProcess.getRemainBurst() <= 0) //if process burst runs out, reset it 
+						nextProcess.initRemainBurst();
 					nextProcess.incrementProcessStats(0, 1, 0);
-				}		
+				}
+				else if(!queue.isEmpty() && currentProcess.getRemainBurst() > queue.peek().getRemainBurst()){
+					//Context Switch
+					System.out.println("[time " + totalTime + "ms] " + 
+							"Context switch (swapping out process ID " + currentProcess.ID + 
+							" for process ID " + queue.peek().ID + ")");
+					queue.add(currentProcess);
+					currentProcess = queue.remove();
+					ready[currentProcess.ID] = totalTime + currentProcess.getRemainBurst();
+					System.out.println("Remaining burst "+ currentProcess.getRemainBurst());
+					coreToProcessID[i] = currentProcess.ID;
+				}
 				else
 				{
 					currentProcess.incrementProcessStats(1, 0, 1);
@@ -475,6 +485,7 @@ public class SystemSim {
 			{
 				processes[i].zeroIOBlockTime();
 				queue.add(processes[i]);
+				processes[i].initRemainBurst();
 			}
 		}
 	}
