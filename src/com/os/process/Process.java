@@ -105,5 +105,11 @@ public class Process
 			return Integer.compare(p1.ID, p2.ID);
 		}
 	};
-
+	
+	public static Comparator<Process> ProcessComparatorRemain = new Comparator<Process>(){
+		public int compare(Process p1, Process p2)
+		{
+			return Integer.compare(p1.getRemainBurst(), p2.getRemainBurst());
+		}
+	};
 }
