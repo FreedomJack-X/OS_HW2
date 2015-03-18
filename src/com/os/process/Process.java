@@ -38,7 +38,7 @@ public class Process
 			//there are b=6 bursts
 			burstTime = randomObj.nextInt(3000 - 200) + 200;
 			
-			burstsLeft = 2; //set to 2 for testing purposes
+			burstsLeft = 6; //set to 2 for testing purposes
 		}
 		
 		totalBurst = 0;

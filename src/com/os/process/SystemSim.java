@@ -322,7 +322,6 @@ public class SystemSim {
 					queue.add(currentProcess);
 					currentProcess = queue.remove();
 					ready[currentProcess.ID] = totalTime + currentProcess.getRemainBurst();
-					System.out.println("Remaining burst "+ currentProcess.getRemainBurst());
 					coreToProcessID[i] = currentProcess.ID;
 				}
 				else
