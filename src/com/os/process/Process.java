@@ -50,7 +50,18 @@ public class Process
 	
 	//each process has its own burst time
 	private int burstTime, totalBurst, remainBurst; 
-	public int getBurstTime() { return burstTime; } 
+	public int getBurstTime() { return burstTime; }
+	public void initBurstTime() 
+	{ 
+		if (type == TYPE_INTERACTIVE)
+		{
+			burstTime = randomObj.nextInt(200 - 20) + 20; 
+		}
+		else if (type == TYPE_CPU)
+		{
+			burstTime = randomObj.nextInt(3000 - 200) + 200;
+		}
+	}
 	public int getTotalBurst() { return this.totalBurst; }
 	public void initRemainBurst() { this.remainBurst = this.burstTime; }
 	public void decreaseRemainBurst(int amount) { this.remainBurst -= amount; }

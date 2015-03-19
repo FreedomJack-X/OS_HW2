@@ -1,32 +1,28 @@
 package com.os.process;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Random;
 
 public class SystemSim {
-	private int NumCores;		  // number of cores
-	private int ready[];	  	  // ready state of each cores
-	private int coreToProcessID[]; //each core runs a different process
-	private Process processes[];  // List of processes
-	private Queue<Process> queue; // queue of processes
-	private int totalTime;		  // Timer
-	private int switchTime;
-	
-	public SystemSim(float probabilityInteractive, int numCores, int numProcess, int switchTime){
+	private Process processes[];  		// List of processes
+	private Queue<Process> queue; 		// queue of processes
+	private int numCores;		  		// number of cores
+	private int coreToProcessID[]; 		//each core runs a different process
+	private int timeFinish[];	  	 	// check when each process finishes; if finished, then context switch
+	private int timeEnterReady[]; 		//time when the process enters the ready queue; used to calculate turnaround time
+	private int numContextSwitch[];		//amount of context switches per process
+	private int timeSwitch;
+		
+	public SystemSim(float probabilityInteractive, int numCores, int numProcess, int timeSwitch){
 		Random randObj = new Random();
 		processes = new Process[numProcess];
-		NumCores = numCores;
-		ready = new int[processes.length];
-		totalTime = 0;
-		this.switchTime = switchTime;
+		this.numCores = numCores;
+		timeFinish = new int[processes.length];
+		timeEnterReady = new int[processes.length];
+		numContextSwitch = new int[processes.length];
+		this.timeSwitch = timeSwitch;
 		for (int i = 0; i < processes.length; i++)
 		{
 			//determine process type
@@ -45,16 +41,8 @@ public class SystemSim {
 	
 	public void FCFS(){		
 		queue = new LinkedList<Process>();
-		for (int i = 0; i < processes.length; i++)
-		{
-			queue.add(processes[i]);
-			System.out.println("[time 0ms] "+processes[i].getTypeString()+" process ID "+i+" entered ready queue (requires "+processes[i].getBurstTime() + "ms CPU time)");
-		}
+		initAlgorithm();
 		
-		coreToProcessID = new int[NumCores];
-		for (int i = 0; i < coreToProcessID.length; i++)
-			coreToProcessID[i] = -1;
-
 		int totalTime = 0;
 
 		//run all interactive processes
@@ -64,7 +52,7 @@ public class SystemSim {
 			handleWaitingProcesses(queue, processes, totalTime);
 			
 			//run each core separately
-			for (int i = 0; i < NumCores; i++)
+			for (int i = 0; i < numCores; i++)
 			{
 				Process currentProcess, nextProcess;
 				
@@ -78,7 +66,7 @@ public class SystemSim {
 					currentProcess = queue.remove();
 					
 					coreToProcessID[i] = currentProcess.ID;
-					ready[coreToProcessID[i]] = totalTime + currentProcess.getBurstTime();
+					timeFinish[coreToProcessID[i]] = totalTime + currentProcess.getBurstTime();
 				}
 				else	
 				{
@@ -95,7 +83,7 @@ public class SystemSim {
 				//increment time
 				
 				//core is finished running process
-				if (ready[currentProcess.ID] == totalTime)
+				if (timeFinish[currentProcess.ID] == totalTime)
 				{	
 					//check if cpu-bound process terminated
 					handleProcessBurstDone(currentProcess, totalTime);
@@ -115,20 +103,11 @@ public class SystemSim {
 					nextProcess = queue.remove();
 					
 					//Context Switch
-					System.out.println("[time " + totalTime + "ms] " + 
-							"Context switch (swapping out process ID " + currentProcess.ID + 
-							" for process ID " + nextProcess.ID + ")");
-
-					//save it in the core->process id map
-					coreToProcessID[i] = nextProcess.ID;
-					//process will be put in ready queue after its burst is done
-					ready[nextProcess.ID] = totalTime + nextProcess.getBurstTime();
-
-					nextProcess.incrementProcessStats(0, currentProcess.getTotalWait() + currentProcess.getBurstTime(), 0);
+					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, nextProcess.getBurstTime());
 				}		
 				else
 				{
-					currentProcess.incrementProcessStats(1, 0, 1);
+					currentProcess.incrementProcessStats(1, 0, 0);
 				}
 			}
 			
@@ -144,21 +123,16 @@ public class SystemSim {
 	
 	public void SJFNoPre(){
 		queue = new PriorityQueue<Process>(processes.length, Process.ProcessComparatorBurst);
-
-		for (int i = 0; i < processes.length; i++)
-		{
-			queue.add(processes[i]);
-			System.out.println("[time 0ms] "+processes[i].getTypeString()+" process ID "+i+" entered ready queue (requires "+processes[i].getBurstTime() + "ms CPU time)");
-		}
-		coreToProcessID = new int[NumCores];
-		for (int i = 0; i < coreToProcessID.length; i++)
-			coreToProcessID[i] = -1;
+		initAlgorithm();
+	
+		int totalTime = 0;
+		
 		while(true)
 		{
 			//check all the waiting processes
 			handleWaitingProcesses(queue, processes, totalTime);
 			
-			for(int i = 0; i < NumCores; i++)
+			for(int i = 0; i < numCores; i++)
 			{
 				Process currentProcess, nextProcess;
 				
@@ -172,7 +146,7 @@ public class SystemSim {
 					currentProcess = queue.remove();
 					
 					coreToProcessID[i] = currentProcess.ID;
-					ready[coreToProcessID[i]] = totalTime + currentProcess.getBurstTime();
+					timeFinish[coreToProcessID[i]] = totalTime + currentProcess.getBurstTime();
 				}
 				else	
 				{
@@ -186,7 +160,7 @@ public class SystemSim {
 				//increment time
 				
 				//core is finished running process
-				if (ready[currentProcess.ID] == totalTime)
+				if (timeFinish[currentProcess.ID] == totalTime)
 				{	
 					//check if cpu-bound process terminated
 					handleProcessBurstDone(currentProcess, totalTime);
@@ -206,20 +180,11 @@ public class SystemSim {
 					nextProcess = queue.remove();
 					
 					//Context Switch
-					System.out.println("[time " + totalTime + "ms] " + 
-							"Context switch (swapping out process ID " + currentProcess.ID + 
-							" for process ID " + nextProcess.ID + ")");
-
-					//save it in the core->process id map
-					coreToProcessID[i] = nextProcess.ID;
-					//process will be put in ready queue after its burst is done
-					ready[nextProcess.ID] = totalTime + nextProcess.getBurstTime();
-
-					nextProcess.incrementProcessStats(0, 1, 0);
+					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, nextProcess.getBurstTime());
 				}		
 				else
 				{
-					currentProcess.incrementProcessStats(1, 0, 1);
+					currentProcess.incrementProcessStats(1, 0, 0);
 				}
 			}
 			totalTime++;
@@ -233,16 +198,7 @@ public class SystemSim {
 	
 	public void SJFWithPre(){		
 		queue = new PriorityQueue<Process>(processes.length, Process.ProcessComparatorRemain);;
-		for (int i = 0; i < processes.length; i++)
-		{
-			queue.add(processes[i]);
-			processes[i].initRemainBurst();
-			System.out.println("[time 0ms] "+processes[i].getTypeString()+" process ID "+i+" entered ready queue (requires "+processes[i].getBurstTime() + "ms CPU time)");
-		}
-		
-		coreToProcessID = new int[NumCores];
-		for (int i = 0; i < coreToProcessID.length; i++) 
-			coreToProcessID[i] = -1;
+		initAlgorithm();
 		
 		int totalTime = 0;
 		
@@ -253,7 +209,7 @@ public class SystemSim {
 			handleWaitingProcesses(queue, processes, totalTime);
 			
 			// run each core separately
-			for(int i = 0; i < NumCores; i++)
+			for(int i = 0; i < numCores; i++)
 			{
 				Process currentProcess, nextProcess;
 				
@@ -267,7 +223,7 @@ public class SystemSim {
 					currentProcess = queue.remove();
 					
 					coreToProcessID[i] = currentProcess.ID;
-					ready[coreToProcessID[i]] = totalTime + currentProcess.getRemainBurst();
+					timeFinish[coreToProcessID[i]] = totalTime + currentProcess.getRemainBurst();
 				}
 				else	
 				{
@@ -281,7 +237,7 @@ public class SystemSim {
 				//increment time
 				
 				//core is finished running process
-				if (ready[currentProcess.ID] == totalTime)
+				if (timeFinish[currentProcess.ID] == totalTime)
 				{	
 					//check if cpu-bound process terminated
 					handleProcessBurstDone(currentProcess, totalTime);
@@ -301,18 +257,10 @@ public class SystemSim {
 					nextProcess = queue.remove();
 					
 					//Context Switch
-					System.out.println("[time " + totalTime + "ms] " + 
-							"Context switch (swapping out process ID " + currentProcess.ID + 
-							" for process ID " + nextProcess.ID + ")");
+					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, nextProcess.getBurstTime());
 
-					//save it in the core->process id map
-					coreToProcessID[i] = nextProcess.ID;
-					//process will be put in ready queue after its burst is done
-					ready[nextProcess.ID] = totalTime + nextProcess.getBurstTime();
-					
 					if (nextProcess.getRemainBurst() <= 0) //if process burst runs out, reset it 
 						nextProcess.initRemainBurst();
-					nextProcess.incrementProcessStats(0, 1, 0);
 				}
 				else if(!queue.isEmpty() && currentProcess.getRemainBurst() > queue.peek().getRemainBurst()){
 					//Context Switch
@@ -321,12 +269,12 @@ public class SystemSim {
 							" for process ID " + queue.peek().ID + ")");
 					queue.add(currentProcess);
 					currentProcess = queue.remove();
-					ready[currentProcess.ID] = totalTime + currentProcess.getRemainBurst();
+					timeFinish[currentProcess.ID] = totalTime + currentProcess.getRemainBurst();
 					coreToProcessID[i] = currentProcess.ID;
 				}
 				else
 				{
-					currentProcess.incrementProcessStats(1, 0, 1);
+					currentProcess.incrementProcessStats(1, 0, 0);
 					currentProcess.decreaseRemainBurst(1);
 				}
 			}
@@ -343,15 +291,7 @@ public class SystemSim {
 		int fixedTimeslice = 80;
 		
 		queue = new LinkedList<Process>();
-		for (int i = 0; i < processes.length; i++)
-		{
-			queue.add(processes[i]);
-			System.out.println("[time 0ms] "+processes[i].getTypeString()+" process ID "+i+" entered ready queue (requires "+processes[i].getBurstTime() + "ms CPU time)");
-		}
-		
-		coreToProcessID = new int[NumCores];
-		for (int i = 0; i < coreToProcessID.length; i++)
-			coreToProcessID[i] = -1;
+		initAlgorithm();
 
 		int totalTime = 0;
 
@@ -362,7 +302,7 @@ public class SystemSim {
 			handleWaitingProcesses(queue, processes, totalTime);
 			
 			//run each core separately
-			for (int i = 0; i < NumCores; i++)
+			for (int i = 0; i < numCores; i++)
 			{
 				Process currentProcess, nextProcess;
 				
@@ -379,7 +319,7 @@ public class SystemSim {
 					coreToProcessID[i] = currentProcess.ID;
 					
 					//its ready time is a fixed timeslice away
-					ready[coreToProcessID[i]] = totalTime + fixedTimeslice;
+					timeFinish[coreToProcessID[i]] = totalTime + fixedTimeslice;
 					
 					//set process running
 					currentProcess.initRemainBurst();
@@ -402,7 +342,7 @@ public class SystemSim {
 
 				//current process's burst isn't done yet, but it ran out of time
 				//put process in the back of the queue
-				if (!isCurrentProcessDone && ready[currentProcess.ID] == totalTime)
+				if (!isCurrentProcessDone && timeFinish[currentProcess.ID] == totalTime)
 					queue.add(currentProcess);
 				
 				//fetch the next process
@@ -415,7 +355,7 @@ public class SystemSim {
 				//increment time
 				
 				//core is finished running process
-				if (isCurrentProcessDone || ready[currentProcess.ID] == totalTime)
+				if (isCurrentProcessDone || timeFinish[currentProcess.ID] == totalTime)
 				{	
 					//io blocking for this process
 					currentProcess.setIOBlockTime(totalTime);
@@ -430,28 +370,16 @@ public class SystemSim {
 					
 					//remove nextProcess from the queue
 					nextProcess = queue.remove();
-					
-					//Context Switch
-					//Don't print if RR still runs the same process
-					if (currentProcess.ID != nextProcess.ID)
-					{
-						System.out.println("[time " + totalTime + "ms] " + 
-								"Context switch (swapping out process ID " + currentProcess.ID + 
-								" for process ID " + nextProcess.ID + ")");
-					}
-					//save it in the core->process id map
-					coreToProcessID[i] = nextProcess.ID;
 
-					//process will be put in ready queue after its burst is done
-					ready[nextProcess.ID] = totalTime + fixedTimeslice;
+					//Context Switch
+					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, fixedTimeslice);
+
 					if (nextProcess.getRemainBurst() <= 0) //if process burst runs out, reset it 
 						nextProcess.initRemainBurst();
-				
-					nextProcess.incrementProcessStats(0, 1, 0);
 				}		
 				else
 				{
-					currentProcess.incrementProcessStats(1, 0, 1);
+					currentProcess.incrementProcessStats(1, 0, 0);
 					currentProcess.decreaseRemainBurst(1);
 				}
 			}
@@ -469,6 +397,24 @@ public class SystemSim {
 	//
 	// Helper functions
 	// 
+	public void initAlgorithm()
+	{
+		for (int i = 0; i < processes.length; i++)
+		{
+			processes[i].initBurstTime();
+			processes[i].initRemainBurst();
+			queue.add(processes[i]);
+			timeEnterReady[i] = 0;
+			numContextSwitch[i] = 0;
+			System.out.println("[time 0ms] "+
+					processes[i].getTypeString() +" process ID " + i + " entered ready queue " +
+							"(requires "+processes[i].getBurstTime() + "ms CPU time)");
+		}
+		
+		coreToProcessID = new int[numCores];
+		for (int i = 0; i < coreToProcessID.length; i++)
+			coreToProcessID[i] = -1;
+	}
 	
 	public void handleWaitingProcesses(Queue<Process> queue, Process[] processes, int totalTime)
 	{
@@ -484,6 +430,8 @@ public class SystemSim {
 			{
 				processes[i].zeroIOBlockTime();
 				queue.add(processes[i]);
+				timeEnterReady[i] = totalTime;
+				processes[i].initBurstTime();
 				processes[i].initRemainBurst();
 			}
 		}
@@ -510,6 +458,30 @@ public class SystemSim {
 					"(turnaround time " + currentProcess.getTotalTurnaround() + "ms, " +
 							"total wait time " + currentProcess.getTotalWait() + "ms)");
 		}
+	}
+	
+	public void handleContextSwitchNoPre(Process currentProcess, Process nextProcess, int coreNum, int totalTime, int duration)
+	{
+		int turnaroundTime = totalTime - timeEnterReady[currentProcess.ID];
+		int waitTime = turnaroundTime - currentProcess.getBurstTime();
+		
+		//calculate turnaround time
+		currentProcess.incrementProcessStats(0, 0, turnaroundTime);
+		
+		//calculate wait time
+		currentProcess.incrementProcessStats(0, waitTime, 0);
+		
+		//print message
+		numContextSwitch[currentProcess.ID]++;
+		System.out.println("[time " + totalTime + "ms] " + 
+				"Context switch (swapping out process ID " + currentProcess.ID + 
+				" for process ID " + nextProcess.ID + ")");
+		
+		//set core to run this new process
+		coreToProcessID[coreNum] = nextProcess.ID;
+		
+		//process will be put in ready queue after its burst (or timeslice) is done
+		timeFinish[nextProcess.ID] = totalTime + duration + timeSwitch;
 	}
 	
 	public boolean checkIfCPUProcessDone(Process[] processes)
@@ -546,12 +518,13 @@ public class SystemSim {
 			maxWait = Math.max(maxWait, processWait);
 			averageWait += processWait;
 			
-			totalBurst += processes[i].getTotalBurst();
+			totalBurst += processes[i].getTotalBurst() - (timeSwitch * numContextSwitch[i]);
 		}
 		
 		averageTurnaround /= (double)processes.length;
 		averageWait /= (double)processes.length;
-		averagePercentBurst = ((totalBurst / finishedTime) * 100) / (double)processes.length;
+		averagePercentBurst = ((totalBurst / finishedTime) * 100);
+		averagePercentBurst /= numCores;
 		
 		//Print out process statistics
 		System.out.println("----------------------------------------");
@@ -562,7 +535,8 @@ public class SystemSim {
 		System.out.println("Average CPU utilization per process: ");
 		for (int i = 0; i < processes.length; i++)
 		{
-			double percentBurst = ((double)processes[i].getTotalBurst() / finishedTime) * 100;
+			int overallBurst = processes[i].getTotalBurst() - (timeSwitch * numContextSwitch[i]);
+			double percentBurst = ((double)overallBurst / finishedTime) * 100;
 			System.out.println("process ID " +  i + ": " + String.format("%.2f", percentBurst) +"%");
 		}
 	}
