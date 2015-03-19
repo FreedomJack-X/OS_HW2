@@ -103,7 +103,8 @@ public class SystemSim {
 					nextProcess = queue.remove();
 					
 					//Context Switch
-					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, nextProcess.getBurstTime());
+					handleContextSwitchNoPre(currentProcess, nextProcess, 
+							i, totalTime, currentProcess.getBurstTime(), nextProcess.getBurstTime());
 				}		
 				else
 				{
@@ -180,7 +181,8 @@ public class SystemSim {
 					nextProcess = queue.remove();
 					
 					//Context Switch
-					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, nextProcess.getBurstTime());
+					handleContextSwitchNoPre(currentProcess, nextProcess, 
+							i, totalTime, currentProcess.getBurstTime(), nextProcess.getBurstTime());
 				}		
 				else
 				{
@@ -257,13 +259,20 @@ public class SystemSim {
 					nextProcess = queue.remove();
 					
 					//Context Switch
-					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, nextProcess.getBurstTime());
+					handleContextSwitchNoPre(currentProcess, nextProcess, 
+							i, totalTime, currentProcess.getBurstTime(), nextProcess.getBurstTime());
 
 					if (nextProcess.getRemainBurst() <= 0) //if process burst runs out, reset it 
 						nextProcess.initRemainBurst();
 				}
 				else if(!queue.isEmpty() && currentProcess.getRemainBurst() > queue.peek().getRemainBurst()){
 					//Context Switch
+					int turnaroundTime = totalTime - timeEnterReady[currentProcess.ID];
+					int waitTime = turnaroundTime - (currentProcess.getBurstTime() - currentProcess.getRemainBurst());
+					//calculate turnaround time
+					currentProcess.incrementProcessStats(0, 0, turnaroundTime);
+					//calculate wait time
+					currentProcess.incrementProcessStats(0, waitTime, 0);
 					System.out.println("[time " + totalTime + "ms] " + 
 							"Context switch (swapping out process ID " + currentProcess.ID + 
 							" for process ID " + queue.peek().ID + ")");
@@ -372,7 +381,8 @@ public class SystemSim {
 					nextProcess = queue.remove();
 
 					//Context Switch
-					handleContextSwitchNoPre(currentProcess, nextProcess, i, totalTime, fixedTimeslice);
+					handleContextSwitchNoPre(currentProcess, nextProcess, 
+							i, totalTime, fixedTimeslice, fixedTimeslice);
 
 					if (nextProcess.getRemainBurst() <= 0) //if process burst runs out, reset it 
 						nextProcess.initRemainBurst();
@@ -403,9 +413,13 @@ public class SystemSim {
 		{
 			processes[i].initBurstTime();
 			processes[i].initRemainBurst();
-			queue.add(processes[i]);
+			processes[i].resetNumBursts();
+			processes[i].resetProcessStats();
 			timeEnterReady[i] = 0;
 			numContextSwitch[i] = 0;
+			
+			queue.add(processes[i]);
+			
 			System.out.println("[time 0ms] "+
 					processes[i].getTypeString() +" process ID " + i + " entered ready queue " +
 							"(requires "+processes[i].getBurstTime() + "ms CPU time)");
@@ -460,10 +474,11 @@ public class SystemSim {
 		}
 	}
 	
-	public void handleContextSwitchNoPre(Process currentProcess, Process nextProcess, int coreNum, int totalTime, int duration)
+	public void handleContextSwitchNoPre(Process currentProcess, Process nextProcess, 
+			int coreNum, int totalTime, int prevDuration, int nextDuration)
 	{
 		int turnaroundTime = totalTime - timeEnterReady[currentProcess.ID];
-		int waitTime = turnaroundTime - currentProcess.getBurstTime();
+		int waitTime = turnaroundTime - prevDuration;
 		
 		//calculate turnaround time
 		currentProcess.incrementProcessStats(0, 0, turnaroundTime);
@@ -481,7 +496,7 @@ public class SystemSim {
 		coreToProcessID[coreNum] = nextProcess.ID;
 		
 		//process will be put in ready queue after its burst (or timeslice) is done
-		timeFinish[nextProcess.ID] = totalTime + duration + timeSwitch;
+		timeFinish[nextProcess.ID] = totalTime + nextDuration + timeSwitch;
 	}
 	
 	public boolean checkIfCPUProcessDone(Process[] processes)
@@ -539,5 +554,6 @@ public class SystemSim {
 			double percentBurst = ((double)overallBurst / finishedTime) * 100;
 			System.out.println("process ID " +  i + ": " + String.format("%.2f", percentBurst) +"%");
 		}
+		System.out.println("----------------------------------------");
 	}
 }

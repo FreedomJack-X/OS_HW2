@@ -37,13 +37,10 @@ public class Process
 		{
 			//there are b=6 bursts
 			burstTime = randomObj.nextInt(3000 - 200) + 200;
-			
-			burstsLeft = 6; //set to 2 for testing purposes
+			burstsLeft = 6; 
 		}
 		
-		totalBurst = 0;
-		totalWait = 0;
-		totalTurnaround = 0;
+		this.resetProcessStats();
 		lastTimeRan = 0;
 		IOBlockTime = 0;
 	}
@@ -85,6 +82,14 @@ public class Process
 	private int burstsLeft;
 	public void decrementNumBursts() { burstsLeft--; } 
 	public int getNumBurstsLeft() { return burstsLeft; }
+	public void resetNumBursts() 
+	{ 
+		if (type == TYPE_CPU)
+		{
+			burstsLeft = 6; 
+		}
+	}
+	
 	public boolean isBurstsDone() { return (burstsLeft <= 0); } 
 		
 	//current wait time
@@ -96,6 +101,12 @@ public class Process
 	private int totalTurnaround, totalWait;
 	public int getTotalWait() { return this.totalWait; }
 	public int getTotalTurnaround() { return this.totalTurnaround; }
+	public void resetProcessStats()
+	{
+		this.totalBurst = 0; 
+		this.totalWait = 0;
+		this.totalTurnaround = 0; 
+	}
 	public void incrementProcessStats(int burstTime, int waitTime, int turnaroundTime) 
 	{ 
 		this.totalBurst += burstTime; 

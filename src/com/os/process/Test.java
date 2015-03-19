@@ -11,7 +11,7 @@ public class Test
 		//system.SJFNoPre();
 		//system.FCFS();
 		//system.SJFNoPre();
-		//system.RR();
+		system.RR();
 		system.SJFWithPre();
 	}
 
